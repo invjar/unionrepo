@@ -1,0 +1,2 @@
+DB_CONNECT = mongodb+srv://union:elmbrook@unionapp.obqmt.mongodb.net/uadb?retryWrites=true&w=majority
+TOKEN_SECRET = adsiufhviurhfnviusdfcrew8ygvafbdkjighwyet128743i568eaurfh9vqn2
