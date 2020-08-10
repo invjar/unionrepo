@@ -75,7 +75,7 @@ router.post('/passsignup', passport.authenticate('local.signup', {
     failureRedirect: '/passsignup',
     failureFlash: true
 }));
-*/
+*/ 
 
 //
 router.post('/signup', async (req, res, next) => {
@@ -85,12 +85,13 @@ router.post('/signup', async (req, res, next) => {
     //return only validation errors
     const {error} = registerValidation(req.body);
     if(error) 
-        return res.status(400).send(error.details[0].message);
+        return res.status(400).json({"message": error.details[0].message});
 
     //checking if the email is already in the Database
     const emailExist = await User.findOne({email: req.body.email});
-    if(emailExist) 
-        return res.status(400).send('email already exists');
+    if(emailExist) {
+        return res.status(400).json({"message": 'email already exists'});
+    }
 
     //password security
     const salt = await bcrypt.genSalt(10);
@@ -115,9 +116,10 @@ router.post('/signup', async (req, res, next) => {
         //res.status(200).json(newUser);
         //use code below to send userId
         //res.status(200).send({ user: user._id, csrfToken: req.header.csrfToken() });
-        res.status(200).send({ user: user._id});
+        res.status(200).send({ "user": user._id});
     } catch(err) {
-            res.status(400).json({message: err });
+            console.log("Error - dup email");
+            res.status(400).json({"message" : err });
     }
 });
 
@@ -134,11 +136,11 @@ router.get('/login', async (req, res, next) => {
     //checking if the email exists
     const user = await User.findOne({email: req.body.email});
     if(!user) 
-        return res.status(400).send('Invalid Email');
+        return res.status(400).json({"message": 'Invalid Email'});
 
     const validPass = await bcrypt.compare(req.body.password, user.password);
     if(!validPass) 
-        return res.status(400).send("Invalid Password");
+        return res.status(400).json({"message": 'Invalid Password'});
     
     //Create and assign a token
     //secret token has been stored in the .env file
@@ -171,8 +173,8 @@ router.post('/add-to-cart/:id', async function(req, res, next) {
 });
 */
 
-router.post('/add-to-cart', async function(req, res, next) {
-    console.log('entering add-to-cart');
+router.post('/addCart', async function(req, res, next) {
+    console.log('entering addCart');
 
     console.log(`session = ${req.session}`);
     const productId = req.body.id;
