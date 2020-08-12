@@ -11,6 +11,9 @@ const LocalStrategy = require('passport-local').Strategy;
 const passportL = require('passport-local');
 const validator = require('express-validator');
 const session = require('session');
+const http = require('http');
+const querystring = require('query-string');
+const url = require('url');
 
 //const sessionStorage = require('sessionstorage');
 
@@ -128,6 +131,49 @@ router.post('/signup', async (req, res, next) => {
 //LOGIN SYSTEM
 router.get('/login', async (req, res, next) => {
 
+    console.log(`req.url = ${req.url}`);
+    let reqUrl = req.url;
+    const parsedUrl = url.parse(reqUrl);
+    // console.log(`parsedUrl = ${parsedUrl}`);
+    const queryUrl = querystring.parse(parsedUrl.query);
+    //console.log(`queryUrl = ${queryUrl.email}`);
+    //console.log(`queryUrl = ${queryUrl.password}`);
+
+    const body = {
+        email: queryUrl.email,
+        password: queryUrl.password
+    };
+
+    //console.log(`body.email = ${body.email}`);
+    //console.log(`body.password = ${body.password}`);
+
+
+    //VALIDATE LOGIN HERE
+    const {error} = loginValidation(body);
+    if(error) 
+        return res.status(400).send(error.details[0].message);
+
+    //checking if the email exists
+    const user = await User.findOne({email: req.body.email});
+    if(!user) 
+        return res.status(400).json({"message": 'Invalid Email'});
+
+    const validPass = await bcrypt.compare(req.body.password, user.password);
+    if(!validPass) 
+        return res.status(400).json({"message": 'Invalid Password'});
+    
+    //Create and assign a token
+    //secret token has been stored in the .env file
+    const token = jwt.sign({_id: user._id}, process.env.TOKEN_SECRET);
+    res.header('authToken', token).send({"token": token, "uid": user._id});
+    //res.json({authToken: token}).send(token);
+
+});
+
+router.post('/login1', async (req, res, next) => {
+
+    console.log(`xreq.body.email = ${req.body.email}`);
+    console.log(`xreq.body.password = ${req.body.password}`);
     //VALIDATE LOGIN HERE
     const {error} = loginValidation(req.body);
     if(error) 
@@ -149,6 +195,72 @@ router.get('/login', async (req, res, next) => {
     //res.json({authToken: token}).send(token);
 
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//LOGIN SYSTEM
+router.post('/login2', async (req, res, next) => {
+
+    //VALIDATE LOGIN HERE
+    const {error} = loginValidation(req.body);
+    if(error) 
+        return res.status(400).send(error.details[0].message);
+
+    //checking if the email exists
+    const user = await User.findOne({email: req.body.email});
+    if(!user) 
+        return res.status(400).json({"message": 'Invalid Email'});
+
+    const validPass = await bcrypt.compare(req.body.password, user.password);
+    if(!validPass) 
+        return res.status(400).json({"message": 'Invalid Password'});
+    
+    //Create and assign a token
+    //secret token has been stored in the .env file
+    const token = jwt.sign({_id: user._id}, process.env.TOKEN_SECRET);
+    res.header('authToken', token).send({"token": token, "uid": user._id});
+    //res.json({authToken: token}).send(token);
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //ADD TO CART
 /*
