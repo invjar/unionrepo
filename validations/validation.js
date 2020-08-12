@@ -34,6 +34,9 @@ const loginValidation = data => {
             .required()
     });
 
+    //console.log(`body.email = ${data.email}`);
+    //console.log(`body.password = ${data.password}`);
+
     return loginValidationSchema.validate(data);
 
 };
