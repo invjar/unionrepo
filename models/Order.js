@@ -20,13 +20,17 @@ const OrderSchema = mongoose.Schema({
     items: [{ 
         item: { type: String }, 
         
-        price: { type: Number }, 
+        price: { type: Number },
+        
+        size: { type: String },
         
         quantity: { type: Number },
 
         id: { type: String },
 
-        lineTotalPrice: { type: Number } 
+        lineTotalPrice: { type: Number } ,
+
+        notes: { type: String }
     }],
     
     totalPrice: { type: Number },
