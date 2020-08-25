@@ -1,6 +1,8 @@
 /*jshint esversion: 8*/
 
 const Joi = require('@hapi/joi');
+const validator = require("email-validator");
+
 
 //CREATING A VALIDATION FUNCTION FOR USER REGISTRATION DATA
 const registerValidation = data => {
@@ -34,10 +36,22 @@ const loginValidation = data => {
             .required()
     });
 
-    //console.log(`body.email = ${data.email}`);
-    //console.log(`body.password = ${data.password}`);
+    console.log(`In val body.email = ${data.email}`);
+    console.log(`In val body.password = ${data.password}`);
 
     return loginValidationSchema.validate(data);
+
+};
+
+//asdfasdfasdf
+const loginValidation1 = data => {
+
+
+    console.log(`In val new data.email = ${data.email}`);
+    console.log(`In val new data.password = ${data.password}`);
+
+    console.log("check = " + validator.validate(data.email));
+    return validator.validate(data.email);
 
 };
 
