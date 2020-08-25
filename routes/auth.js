@@ -10,7 +10,8 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const passportL = require('passport-local');
 const validator = require('express-validator');
-const session = require('session');
+//const session = require('session');
+const session = require('express-session');
 const http = require('http');
 const querystring = require('query-string');
 const url = require('url');
@@ -24,7 +25,7 @@ const verify = require('./verifyToken');
 const products = require('./products');
 
 const Product = require('../models/Product');
-const Cart = require('../models/Cart'); 
+//const Cart = require('../models/Cart'); 
 const nCart = require('../models/CartNew');
 
 //const csrf = require('csurf');
@@ -131,11 +132,11 @@ router.post('/signup', async (req, res, next) => {
 //LOGIN SYSTEM
 router.get('/login', async (req, res, next) => {
 
-    console.log(`req.url = ${req.url}`);
+    console.log(`login .. req.url = ${req.url}`);
     let reqUrl = req.url;
     const parsedUrl = url.parse(reqUrl);
-    // console.log(`parsedUrl = ${parsedUrl}`);
     const queryUrl = querystring.parse(parsedUrl.query);
+    // console.log(`parsedUrl = ${parsedUrl}`);
     //console.log(`queryUrl = ${queryUrl.email}`);
     //console.log(`queryUrl = ${queryUrl.password}`);
 
@@ -144,33 +145,62 @@ router.get('/login', async (req, res, next) => {
         password: queryUrl.password
     };
 
-    //console.log(`body.email = ${body.email}`);
-    //console.log(`body.password = ${body.password}`);
+    console.log(`body.email = ${body.email}`);
+    console.log(`body.password = ${body.password}`);
 
 
     //VALIDATE LOGIN HERE
     const {error} = loginValidation(body);
-    if(error) 
+    if(error) {
+        console.log("Debug #1");
         return res.status(400).send(error.details[0].message);
+    }
 
     //checking if the email exists
-    const user = await User.findOne({email: req.body.email});
-    if(!user) 
+    const user = await User.findOne({email: body.email});
+    if(!user) {
+        console.log("Debug #2");
         return res.status(400).json({"message": 'Invalid Email'});
+    }
 
-    const validPass = await bcrypt.compare(req.body.password, user.password);
+    const validPass = await bcrypt.compare(body.password, user.password);
     if(!validPass) 
         return res.status(400).json({"message": 'Invalid Password'});
     
     //Create and assign a token
     //secret token has been stored in the .env file
     const token = jwt.sign({_id: user._id}, process.env.TOKEN_SECRET);
-    res.header('authToken', token).send({"token": token, "uid": user._id});
+
+    // check if cart exists for specified user
+    const cartId = await nCart.findOne({userId: user._id});
+
+
+    if(cartId !== null) {
+        console.log(`cartId = ${cartId._id}`);
+        res.header('authToken', token).send({"token": token, "uid": user._id, "cartId": cartId});
+    } else {
+        console.log('null cart ID');
+
+        /* this code is to create a dummy cartId and send it back at the time of login
+        ncart = new nCart({userId: user._id});
+        ncart.save();
+        console.log(`ncart = ${ncart}`);
+        //ncart.initCart(, {});
+        res.header('authToken', token).send({"token": token, "uid": user._id, "cartId": ncart._id});
+        */
+       res.header('authToken', token).send({"token": token, "uid": user._id, "cartId": null});
+
+
+    }
+
+
+  
     //res.json({authToken: token}).send(token);
 
 });
 
-router.post('/login1', async (req, res, next) => {
+// params are passed as part of the BODY
+router.post('/loginDontUse', async (req, res, next) => {
 
     console.log(`xreq.body.email = ${req.body.email}`);
     console.log(`xreq.body.password = ${req.body.password}`);
@@ -198,23 +228,6 @@ router.post('/login1', async (req, res, next) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //LOGIN SYSTEM
 router.post('/login2', async (req, res, next) => {
 
@@ -239,26 +252,6 @@ router.post('/login2', async (req, res, next) => {
     //res.json({authToken: token}).send(token);
 
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -340,20 +333,30 @@ router.get('/shopping-cart', function(req, res, next) {
 });
 
 
-router.post('/add-to-newcart', async function(req, res, next) {
+router.post('/addToCart', async function(req, res, next) {
     console.log('entering add-to-newcart');
 
     //console.log(`session = ${req.session}`);
     const productId = req.body.id;
     const quantity = req.body.quantity;
-    const price = req.body.price;
+    const price = (req.body.price || 0) + (req.body.smallPrice || 0) + (req.body.largePrice || 0);
+    const size = req.body.size;
+    const notes = req.body.notes;
+    const userId = req.body.userId;
+
+    
+
     //console.log(`productId = ${productId}`);
     //console.log(`quantity = ${quantity}`);
     //console.log(`price = ${price}`);
+    //console.log(`name = ${name}`);
+    console.log(`size = ${size}`);
+    console.log(`notes = ${notes}`);
+    console.log(`userId = ${userId}`);
 
 
 
-    Product.findOne( { '_id': productId }, function(err, product) {
+    Product.findOne( { '_id': productId }, async function(err, product) {
         if(err) {
             return res.status(400).send('product not found');
         }
@@ -361,6 +364,8 @@ router.post('/add-to-newcart', async function(req, res, next) {
        // console.log('Product found !!!');
         //console.log('req.session.id !!!' + req.session._id);
         //console.log('req.headers.cart: ' + req.headers.cart);
+        const prd = await Product.findById(productId);
+        const name = prd.product;
 
         let cart;
 
@@ -368,12 +373,12 @@ router.post('/add-to-newcart', async function(req, res, next) {
             console.log('No existing cart session found .. creating a new cart session in mongo');
             ncart = new nCart({});
             //console.log(`productId = ${productId}`);
-            ncart.initCart({}, {item: "some name", quantity: quantity, price: price, id: productId, lineTotalPrice: 0});
+            ncart.initCart({}, {item: name, quantity:quantity, price: price, id: productId, size: size, notes: notes, lineTotalPrice: 0});
         }
         else {
             // ncart = new nCart(session.cart);
             ncart = new nCart();
-            ncart.initCart(session.cart, {item:productId.product, quantity:quantity, price: price, id: productId, lineTotalPrice: 0});
+            ncart.initCart(session.cart, {item: name, quantity:quantity, price: price, id: productId, size: size, notes: notes, lineTotalPrice: 0});
             console.log('There is an existing cart session ... This should be an update of existing session');
         }
 
@@ -388,6 +393,7 @@ router.post('/add-to-newcart', async function(req, res, next) {
             //ncart.items;
             //console.log(`ncart.items[0]: ${JSON.stringify(ncart.items[0])}`);
             //console.log(`ncart.items[1]: ${JSON.stringify(ncart.items[1])}`);
+            ncart.userId = userId;
 
             const savednCart = ncart.save();
         } 
@@ -395,6 +401,7 @@ router.post('/add-to-newcart', async function(req, res, next) {
             //newValue = { $set: { items: ncart.items, totalQty: ncart.totalQty, totalPrice: ncart.totalPrice } };
             //newValue = { $set: { items: ncart.items, totalQty:2000, totalPrice: 4000 } };
             //console.log(`BEFORE MongoDB UPDATE .... newValue = ${JSON.stringify(newValue)}`);
+            ncart.userId = userId;
 
             ncart.totalPrice = 0;
             ncart.totalQty = 0;
@@ -415,6 +422,8 @@ router.post('/add-to-newcart', async function(req, res, next) {
             //let tempCart = nCart.find();
             //console.log(`nCart.find(): ${JSON.stringify(tempCart)}`);
             //const savednCart = nCart.findOneAndUpdate({_id: session.cart._id}, ncart, {upsert: true});
+            ncart.userId = userId;
+
             nCart.deleteOne({"_id": session.cart._id}, (err, res) => {
                 if(err) {
                     console.log(`err: ${err}`);
@@ -443,6 +452,124 @@ router.post('/add-to-newcart', async function(req, res, next) {
 });
 
 
+// use this route if you want to duplicate cart items to be consoldiated with quantity count increase
+router.post('/addToCartConsolidated', async function(req, res, next) {
+    console.log('entering add-to-newcart');
+
+    //console.log(`session = ${req.session}`);
+    const productId = req.body.id;
+    const quantity = req.body.quantity;
+    const price = (req.body.price || 0) + (req.body.smallPrice || 0) + (req.body.largePrice || 0);
+    const size = req.body.size;
+    const notes = req.body.notes;
+    const userId = req.body.userId;
+
+    
+
+    //console.log(`productId = ${productId}`);
+    //console.log(`quantity = ${quantity}`);
+    //console.log(`price = ${price}`);
+    //console.log(`name = ${name}`);
+    console.log(`size = ${size}`);
+    console.log(`notes = ${notes}`);
+    console.log(`userId = ${userId}`);
+
+
+
+    Product.findOne( { '_id': productId }, async function(err, product) {
+        if(err) {
+            return res.status(400).send('product not found');
+        }
+
+       // console.log('Product found !!!');
+        //console.log('req.session.id !!!' + req.session._id);
+        //console.log('req.headers.cart: ' + req.headers.cart);
+        const prd = await Product.findById(productId);
+        const name = prd.product;
+
+        let cart;
+
+        if(session.cart == null) {
+            console.log('No existing cart session found .. creating a new cart session in mongo');
+            ncart = new nCart({});
+            //console.log(`productId = ${productId}`);
+            ncart.initCart({}, {item: name, quantity:quantity, price: price, id: productId, size: size, notes: notes, lineTotalPrice: 0});
+        }
+        else {
+            // ncart = new nCart(session.cart);
+            ncart = new nCart();
+            ncart.initCart(session.cart, {item: name, quantity:quantity, price: price, id: productId, size: size, notes: notes, lineTotalPrice: 0});
+            console.log('There is an existing cart session ... This should be an update of existing session');
+        }
+
+        console.log('new cart created found !!!');
+        //console.log(`product.ItemName: ${product.product}`);
+
+        //console.log(`session.cart: ${JSON.stringify(session.cart)}`);
+        // console.log(`ncart: ${JSON.stringify(ncart)}`);
+        //console.log(`ncart: ${ncart}`);
+        if(!session.cart) {
+            console.log('Creating a new session.cart ... MongoDB save');
+            //ncart.items;
+            //console.log(`ncart.items[0]: ${JSON.stringify(ncart.items[0])}`);
+            //console.log(`ncart.items[1]: ${JSON.stringify(ncart.items[1])}`);
+            ncart.userId = userId;
+
+            const savednCart = ncart.save();
+        } 
+        else {
+            //newValue = { $set: { items: ncart.items, totalQty: ncart.totalQty, totalPrice: ncart.totalPrice } };
+            //newValue = { $set: { items: ncart.items, totalQty:2000, totalPrice: 4000 } };
+            //console.log(`BEFORE MongoDB UPDATE .... newValue = ${JSON.stringify(newValue)}`);
+            ncart.userId = userId;
+
+            ncart.totalPrice = 0;
+            ncart.totalQty = 0;
+            ncart.items.forEach(element => {
+                ncart.totalPrice += element.lineTotalPrice;
+                console.log(`ncart.totalPrice: ${ncart.totalPrice}`);
+                ncart.totalQty++;
+            });
+    
+            console.log(`ncart : ${JSON.stringify(ncart)}`);
+            //console.log(`session.cart._id: ${session.cart._id}`);
+            //console.log(`ncart._id: ${ncart._id}`);
+
+
+            //matchId = session.cart._id;
+            //const savednCart = ncart.updateOne({_id: ObjectId(ncart._id)}, newValue);
+            //const savednCart = ncart.updateOne({_id: session.cart._id}, newValue, {upsert: true});
+            //let tempCart = nCart.find();
+            //console.log(`nCart.find(): ${JSON.stringify(tempCart)}`);
+            //const savednCart = nCart.findOneAndUpdate({_id: session.cart._id}, ncart, {upsert: true});
+            ncart.userId = userId;
+
+            nCart.deleteOne({"_id": session.cart._id}, (err, res) => {
+                if(err) {
+                    console.log(`err: ${err}`);
+                }
+            });
+            //console.log(`tempCart: ${JSON.stringify(tempCart)}`);
+            ncart.save();
+        
+            
+            //const savednCart = ncart.updateOne({_id: ObjectId(ncart._id)}, newValue);
+        }
+
+        try {
+            res.status(200).json(ncart);
+            console.log('Save was completed ... or was it a scam???');            
+        } catch(err) {
+                res.status(400).json({message: err });
+        }
+   
+        session.cart = ncart;
+        //console.log(`session.cart = ${session.cart}`);
+        
+    });
+
+    console.log('exiting add-to-cart');
+});
 
 
 module.exports = router;

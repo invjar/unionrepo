@@ -59,7 +59,7 @@ router.patch('/orderStatusUpdate/:orderId/:status/:a/:b', async (req, res, next)
 });
 
 //this part recieves post from browser to add new orders to cart
-router.post('/order', verify, async (req, res, next) => {
+router.post('/order', async (req, res, next) => {
     console.log("post response for create order on console");
     //tests db connection
     const port = process.env.port || 3000;
