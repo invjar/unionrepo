@@ -8,14 +8,26 @@ const { builtinModules } = require('module');
 
 const ProductSchema = mongoose.Schema({
     product: { type: String, required: true },
-    id: { type: String, required: true },
-    
+    //id: { type: String, required: true },
+
+    smallPrice: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+   
     price: {
         type: Number,
         required: true,
         default: 0
     },
-    
+
+    largePrice: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+   
     isSold: {
         type: Boolean,
         required: true,
