@@ -90,6 +90,63 @@ router.post('/order', async (req, res, next) => {
     
 });
 
+router.post('/neworder', async (req, res, next) => {
+    let reqUrl = req.url;
+    const parsedUrl = url.parse(reqUrl);
+    const queryUrl = querystring.parse(parsedUrl.query);
+
+    console.log("entering new order");
+
+    /*
+    const query = {
+        name: queryUrl.name,
+        userId: queryUrl.userId,
+        location: queryUrl.location
+    };
+
+    console.log(`query.name = ${query.name}`);
+    console.log(`query.userId = ${query.userId}`);
+    console.log(`query.location = ${query.location}`);
+    */
+
+    const body = [];
+
+    req.body.order.forEach(element => {
+        //console.log(`element: ${element.price}`);
+        const temp = {"price": element.price, "size": element.size, "id": element.prodId, "notes": element.notes};
+        body.push(temp);
+    });
+
+    body.forEach(element => {
+        console.log(`body = ${element.notes}`);
+    });
+
+    //console.log(`body.order = ${body.order}`);
+
+    const order = new Order({
+        name: queryUrl.name,
+        userId: queryUrl.userId,
+        location: queryUrl.location,
+        items: body,
+        totalPrice: 100,
+        totalQty: 2,
+        status: "Pending"
+    });
+
+    console.log("order = " + order);
+
+    try {
+        const savedOrder = await order.save();
+        console.log('Save was completed ... or was it a scam???');
+            res.status(200).json(savedOrder);
+    } catch(err) {
+            res.status(400).json({message: err });
+    }
+
+    // res.status(200).json("success");
+
+});
+
 //specific search
 router.get('/:productId', async (req, res, next) => {
     try {
