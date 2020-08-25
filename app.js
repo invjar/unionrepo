@@ -36,6 +36,9 @@ const connectDB = require('./db/database');
 const ordersRoute = require('./routes/orders');
 const authRoute = require('./routes/auth');
 const nCart = require('./models/CartNew');
+
+const Counter = require('./models/Counter');
+
 //const validations = require('./validations/validation');
 
 app.use('/api/products', productsRoute);
@@ -78,6 +81,8 @@ app.use(function(req, res, next) {
     //res.locals.login = req.isAuthenticated();
     res.locals.session - req.session;
 });
+
+
 
 //app.use('/users', usersRoute);
 //app.use('/user', userRoute);
