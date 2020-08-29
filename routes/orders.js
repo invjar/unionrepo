@@ -11,35 +11,9 @@ const session = require('express-session');
 const verify = require('./verifyToken');
 const querystring = require('query-string');
 const url = require('url');
+const User = require('../models/User');
 
-//this part displays order history
-router.get('/orderHistory/:userName', async (req, res, next) => {
 
-    console.log("At least got till here ... eeiks");
-    try {
-        console.log(`username is ${req.params.userName}`);
-        const getOrders = await Order.find({userName: req.params.userName});
-        //const getOrders = await Order.find();
-        console.log(`getOrders = ${getOrders}`);
-        res.status(200).send(getOrders);
-    } catch(err) {
-        res.status(400).json({message: err });
-    }
-});
-
-router.get('/orderStatus/:status', async (req, res, next) => {
-
-    console.log("At least got till here in roderStaus ... eeiks");
-    try {
-        console.log(`status is ${req.params.status}`);
-        const getOrders = await Order.find({status: req.params.status}); 
-        //const getOrders = await Order.find();
-        console.log(`getOrders = ${getOrders}`);
-        res.status(200).send(getOrders);
-    } catch(err) {
-        res.status(400).json({message: err });
-    }
-});
 
 router.patch('/orderStatusUpdate/:orderId/:status/:a/:b', async (req, res, next) => {
     try {
@@ -123,8 +97,10 @@ router.post('/neworder', async (req, res, next) => {
 
     //console.log(`body.order = ${body.order}`);
 
+    const getRec = await User.findById(queryUrl.userId);
+
     const order = new Order({
-        name: queryUrl.name,
+        name: getRec.name,
         userId: queryUrl.userId,
         location: queryUrl.location,
         items: body,
@@ -147,6 +123,78 @@ router.post('/neworder', async (req, res, next) => {
 
 });
 
+//no param required
+router.get('/pendingorders', async (req, res, next) => {
+    console.log("in getorders");
+    try {
+        /*
+        const ord = Order.aggregate(
+            [{$match: { status: "complete" }}]
+        );
+        */
+
+        let orders = [];
+        const ord = await Order.find({status: "Pending"});
+
+        ord.forEach(element => {
+            //console.log(`element: ${element.price}`);
+            const temp = {"orderId": element._id, "status": element.status, "name": element.name, "location": element.location, "date": element.createDate};
+            orders.push(temp);
+        });
+
+        console.log(`ord = ${ord}`);
+        res.status(200).json(orders);
+    } catch (err) {
+        res.status(400).json({message: err});
+
+    }
+});
+
+
+//send orderId in header
+router.get('/orderdetails', async (req, res, next) => {
+    let reqUrl = req.url;
+    const parsedUrl = url.parse(reqUrl);
+    const queryUrl = querystring.parse(parsedUrl.query);
+
+    console.log("entering orderdetails");
+
+    const orderId = queryUrl.orderId;
+    console.log(`orderId = ${orderId}`);
+
+    const orderDetails = await Order.findById(orderId);
+
+    try {
+        res.status(200).json(orderDetails);
+    } catch (err) {
+        res.status(400).json({message: err});
+    }
+});
+
+//params are orderId and current status
+router.patch('/orderstatusupdate', async (req, res, next) => {
+    let reqUrl = req.url;
+    const parsedUrl = url.parse(reqUrl);
+    const queryUrl = querystring.parse(parsedUrl.query);
+
+    console.log("entering orderstatusupdate");
+
+    const orderId = queryUrl.orderId;
+    const status = queryUrl.status;
+    console.log(`orderId = ${orderId}`);
+    console.log(`status = ${status}`);
+
+    try {
+        const updatedOrd = await Order.updateOne(
+            { _id: orderId },
+            { $set: { status: status } }
+        );
+        res.status(200).json(updatedOrd);
+    } catch (err) {
+        res.status(400).json({message: err});
+    }
+});
+
 //specific search
 router.get('/:productId', async (req, res, next) => {
     try {
@@ -159,6 +207,12 @@ router.get('/:productId', async (req, res, next) => {
     }
 });
 
+
+
+
+
+
+
 //DELETE product from catalog
 router.delete('/:productId', async (req, res, next) => {
     try {
@@ -169,6 +223,12 @@ router.delete('/:productId', async (req, res, next) => {
         res.json({message: err});
     }
 });
+
+
+
+
+
+
 
 //UPDATE product on catalog
 router.patch('/:productId', async (req, res, next) => {
@@ -182,6 +242,42 @@ router.patch('/:productId', async (req, res, next) => {
     res.status(200).json(updatedProd);
     } catch (err) {
         res.json({message: err});
+    }
+});
+
+
+
+
+
+//this part displays order history
+router.get('/orderHistoryold/:userName', async (req, res, next) => {
+
+    console.log("At least got till here ... eeiks");
+    try {
+        console.log(`username is ${req.params.userName}`);
+        const getOrders = await Order.find({userName: req.params.userName});
+        //const getOrders = await Order.find();
+        console.log(`getOrders = ${getOrders}`);
+        res.status(200).send(getOrders);
+    } catch(err) {
+        res.status(400).json({message: err });
+    }
+});
+
+
+
+
+router.get('/orderStatusold/:status', async (req, res, next) => {
+
+    console.log("At least got till here in roderStaus ... eeiks");
+    try {
+        console.log(`status is ${req.params.status}`);
+        const getOrders = await Order.find({status: req.params.status}); 
+        //const getOrders = await Order.find();
+        console.log(`getOrders = ${getOrders}`);
+        res.status(200).send(getOrders);
+    } catch(err) {
+        res.status(400).json({message: err });
     }
 });
 
