@@ -79,9 +79,9 @@ router.post('/neworder', async (req, res, next) => {
     };
 
     console.log(`query.name = ${query.name}`);
-    console.log(`query.userId = ${query.userId}`);
     console.log(`query.location = ${query.location}`);
     */
+   //console.log(`query.userId = ${query.userId}`);
 
     const body = [];
 
@@ -97,19 +97,45 @@ router.post('/neworder', async (req, res, next) => {
 
     //console.log(`body.order = ${body.order}`);
 
-    const getRec = await User.findById(queryUrl.userId);
+    let getRec;
+    let order;
 
-    const order = new Order({
-        name: getRec.name,
-        userId: queryUrl.userId,
-        location: queryUrl.location,
-        items: body,
-        totalPrice: 100,
-        totalQty: 2,
-        status: "Pending"
-    });
+    if(queryUrl.userId !== "guest") {
+        //userid not null
+        console.log("*************userid not null");
+        getRec = await User.findById(queryUrl.userId);
 
-    console.log("order = " + order);
+        order = new Order({
+            name: getRec.name,
+            userId: queryUrl.userId,
+            location: queryUrl.location,
+            items: body,
+            totalPrice: 100,
+            totalQty: 2,
+            status: "Pending"
+        });
+    
+    } else {
+        console.log("userid is guest");
+        //const getRec = await User.findById(queryUrl.userId);
+        getRec = await User.findOne({name: queryUrl.userId});
+
+        console.log(`****&&*** getRec: ${getRec}`);
+        console.log(`getRec.email = ${getRec.email}`);
+
+        order = new Order({
+            name: queryUrl.name,
+            userId: getRec._id,
+            location: queryUrl.location,
+            items: body,
+            totalPrice: 100,
+            totalQty: 2,
+            status: "Pending"
+        });
+    }
+
+
+    //console.log("order = " + order);
 
     try {
         const savedOrder = await order.save();
