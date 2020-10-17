@@ -63,6 +63,11 @@ const ProductSchema = mongoose.Schema({
         type: String,
         required: false,
         default: "Akash"
+    },
+
+    subcategory: {
+        type: String,
+        required: false
     }
 });
 
