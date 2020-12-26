@@ -60,7 +60,7 @@ router.get('/menu', async (req, res, next) => {
         for(let i = 0; i < prod.length; i++) {
             if((prod[i].inStock === true) && (prod[i].quantity > 0) && (prod[i].isSold === true)) {
                 console.log(`prod ${i + 1} is: ${prod[i]._id}`);
-                let temp = {_id: prod[i]._id, product: prod[i].product, largePrice: prod[i].largePrice , price: prod[i].price, smallPrice: prod[i].smallPrice, description: prod[i].description, image: prod[i].image, subcategory: prod[i].subcategory };
+                let temp = {_id: prod[i]._id, product: prod[i].product, largePrice: prod[i].largePrice , price: prod[i].price, smallPrice: prod[i].smallPrice, description: prod[i].description, image: prod[i].image, subcategory: prod[i].subcategory, category: prod[i].category };
                 clientArray.push(temp);
             }
         }
@@ -111,6 +111,7 @@ router.post('/addproduct', async (req, res, next) => {
         image: req.body.image,
         quantity:  req.body.quantity,
         isSold: req.body.isSold,
+        category: req.body.category,
         subcategory: req.body.subcategory
     });
 
